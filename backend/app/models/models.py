@@ -35,7 +35,18 @@ class Arrival(Base):
 class BunchReport(Base):
     __tablename__ = "bunch_reports"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # 一次检测的批次号：同一次 /run 写入的所有事件行共享；报告按它聚合成一份
+    run_id: Mapped[int] = mapped_column(Integer, index=True)
     line_id: Mapped[int] = mapped_column(ForeignKey("lines.id"))
-    stop_name: Mapped[str] = mapped_column(String(64))
+    # 本次检测的站点范围："*" 表示全站
+    scope: Mapped[str] = mapped_column(String(64))
+    # 该事件实际发生的站点
+    event_stop_name: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    summary_json: Mapped[str] = mapped_column(Text, default="[]")
+    gap_min: Mapped[float] = mapped_column(Float, default=0.0)
+    planned_headway_min: Mapped[float] = mapped_column(Float, default=0.0)
+    earlier_trip: Mapped[str] = mapped_column(String(32), default="")
+    later_trip: Mapped[str] = mapped_column(String(32), default="")
+    # 检测成功时与建议文句一起原子固化；读侧只展示这两列，禁止按现行阈值重判或重拼
+    status: Mapped[str] = mapped_column(String(32), default="")
+    suggestion: Mapped[str] = mapped_column(Text, default="")

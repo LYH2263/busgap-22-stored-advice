@@ -5,20 +5,20 @@ const trips = ref<any[]>([])
 const events = ref<any[]>([])
 onMounted(async () => {
   trips.value = await api('/trips')
-  try {
-    events.value = (await api('/reports/run?line_id=1', { method: 'POST' })).events || []
-  } catch { events.value = [] }
+  // 班次页只读最近一次检测的库内快照，不触发新检测
+  const reports = await api('/reports')
+  events.value = reports.length ? reports[0].events : []
 })
 function stripClass(s: string) {
   return s === 'bunching' ? 'bg-bunch' : s === 'large_gap' ? 'bg-large' : ''
 }
 function label(s: string) {
-  return s === 'bunching' ? '串车' : s === 'large_gap' ? '大间隔' : '正常'
+  return s === 'bunching' ? '串车' : s === 'large_gap' ? '大间隔' : s === 'normal' ? '正常' : `未知码(${s || '空'})`
 }
 </script>
 <template>
   <h1>班次 · 间隔条带</h1>
-  <p class="sub">左侧班次清单，右侧串车/间隔竖直条带</p>
+  <p class="sub">左侧班次清单，右侧取最近报告库内固化的间隔条带（不重判）</p>
   <div class="bg-split">
     <aside class="bg-trip-col">
       <h2>班次列表</h2>
@@ -45,9 +45,11 @@ function label(s: string) {
           <span class="badge" :class="e.status === 'bunching' ? 'badge-bad' : e.status === 'large_gap' ? 'badge-warn' : 'badge-ok'">
             {{ label(e.status) }}
           </span>
+          <span v-if="e.text_drift" class="badge badge-warn" style="margin-left:.35rem">文句漂移</span>
+          <span v-if="e.status_drift" class="badge badge-bad" style="margin-left:.35rem">状态漂移</span>
         </div>
       </article>
-      <p v-if="!events.length" class="muted">暂无间隔事件</p>
+      <p v-if="!events.length" class="muted">暂无间隔事件，请先在报告页执行检测</p>
     </div>
   </div>
 </template>
